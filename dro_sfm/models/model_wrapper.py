@@ -222,65 +222,65 @@ class ModelWrapper(torch.nn.Module):
             **output['metrics'],
         }
 
-    # def training_epoch_end(self, output_batch):
-    #     """Finishes a training epoch."""
-    #     # Calculate and reduce average loss and metrics per GPU
-    #     loss_and_metrics = average_loss_and_metrics(output_batch, 'avg_train')
-    #     loss_and_metrics = reduce_dict(loss_and_metrics, to_item=True)
+    def training_epoch_end(self, output_batch):
+        """Finishes a training epoch."""
+        # Calculate and reduce average loss and metrics per GPU
+        loss_and_metrics = average_loss_and_metrics(output_batch, 'avg_train')
+        loss_and_metrics = reduce_dict(loss_and_metrics, to_item=True)
 
-    #     # Log to wandb
-    #     if self.logger:
-    #         self.logger.log_metrics({
-    #             **self.logs, **loss_and_metrics,
-    #         })
+        # Log to wandb
+        if self.logger:
+            self.logger.log_metrics({
+                **self.logs, **loss_and_metrics,
+            })
 
-    #     return {
-    #         **loss_and_metrics
-    #     }
+        return {
+            **loss_and_metrics
+        }
 
-    # def validation_epoch_end(self, output_data_batch):
-    #     """Finishes a validation epoch."""
+    def validation_epoch_end(self, output_data_batch):
+        """Finishes a validation epoch."""
 
-    #     # Reduce depth metrics
-    #     metrics_data = all_reduce_metrics(
-    #         output_data_batch, self.validation_dataset, self.metrics_name)
+        # Reduce depth metrics
+        metrics_data = all_reduce_metrics(
+            output_data_batch, self.validation_dataset, self.metrics_name)
 
-    #     # Create depth dictionary
-    #     metrics_dict = create_dict(
-    #         metrics_data, self.metrics_keys, self.metrics_modes,
-    #         self.config.datasets.validation)
+        # Create depth dictionary
+        metrics_dict = create_dict(
+            metrics_data, self.metrics_keys, self.metrics_modes,
+            self.config.datasets.validation)
 
-    #     # Print stuff
-    #     self.print_metrics(metrics_data, self.config.datasets.validation)
+        # Print stuff
+        self.print_metrics(metrics_data, self.config.datasets.validation)
 
-    #     # Log to wandb
-    #     if self.logger:
-    #         self.logger.log_metrics({
-    #             **metrics_dict, 'global_step': self.current_epoch + 1,
-    #         })
+        # Log to wandb
+        if self.logger:
+            self.logger.log_metrics({
+                **metrics_dict, 'global_step': self.current_epoch + 1,
+            })
 
-    #     return {
-    #         **metrics_dict
-    #     }
+        return {
+            **metrics_dict
+        }
 
-    # def test_epoch_end(self, output_data_batch):
-    #     """Finishes a test epoch."""
+    def test_epoch_end(self, output_data_batch):
+        """Finishes a test epoch."""
 
-    #     # Reduce depth metrics
-    #     metrics_data = all_reduce_metrics(
-    #         output_data_batch, self.test_dataset, self.metrics_name)
+        # Reduce depth metrics
+        metrics_data = all_reduce_metrics(
+            output_data_batch, self.test_dataset, self.metrics_name)
 
-    #     # Create depth dictionary
-    #     metrics_dict = create_dict(
-    #         metrics_data, self.metrics_keys, self.metrics_modes,
-    #         self.config.datasets.test)
+        # Create depth dictionary
+        metrics_dict = create_dict(
+            metrics_data, self.metrics_keys, self.metrics_modes,
+            self.config.datasets.test)
 
-    #     # Print stuff
-    #     self.print_metrics(metrics_data, self.config.datasets.test)
+        # Print stuff
+        self.print_metrics(metrics_data, self.config.datasets.test)
 
-    #     return {
-    #         **metrics_dict
-    #     }
+        return {
+            **metrics_dict
+        }
 
     def forward(self, *args, **kwargs):
         """Runs the model and returns the output."""

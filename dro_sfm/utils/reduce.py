@@ -63,7 +63,7 @@ def all_reduce_metrics(output_data_batch, datasets, name='depth'):
         for output in output_batch:
             for i, idx in enumerate(output['idx']):
                 seen[idx] += 1
-        seen = reduce_value(seen, average=False, name='idx')
+        # seen = reduce_value(seen, average=False, name='idx')
         assert not np.any(seen.numpy() == 0), \
             'Not all samples were seen during evaluation'
         # Reduce all relevant metrics
@@ -72,7 +72,7 @@ def all_reduce_metrics(output_data_batch, datasets, name='depth'):
             for output in output_batch:
                 for i, idx in enumerate(output['idx']):
                     metrics[idx] = output[name]
-            metrics = reduce_value(metrics, average=False, name=name)
+            # metrics = reduce_value(metrics, average=False, name=name)
             metrics_dict[name] = (metrics / seen.view(-1, 1)).mean(0)
         # Append metrics dictionary to the list
         all_metrics_dict.append(metrics_dict)

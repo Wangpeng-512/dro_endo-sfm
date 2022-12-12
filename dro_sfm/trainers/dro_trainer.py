@@ -116,7 +116,7 @@ class DROTrainer():
             # Append dataset outputs to list of all outputs
             all_outputs.append(outputs)
         # Return all outputs for epoch end
-        return all_outputs
+        return module.validation_epoch_end(all_outputs)
 
     def test(self, module):
         # Send module to GPU
