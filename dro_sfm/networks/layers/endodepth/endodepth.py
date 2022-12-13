@@ -54,7 +54,8 @@ class ResnetAttentionEncoder(ResnetEncoder):
         else:
             kernel = 3
         self.SAB = SpatialAttention(self.num_ch_enc[1], kernel_size=kernel)
-        self.out = nn.Identity() if out_layer is None else out_layer
+        self.out_layer = out_layer
+        # self.out = nn.Identity() if out_layer is None else out_layer
 
     def forward(self, input_image):
         features = []
@@ -69,8 +70,13 @@ class ResnetAttentionEncoder(ResnetEncoder):
         features.append(self.SAB(x))
         features.append(self.encoder.layer1(self.encoder.maxpool(features[0])))
         features.append(self.encoder.layer2(features[1]))
+        if self.out_layer:
+            features.append(self.out_layer(features[2]))
+            if is_list:
+                features[-1] = torch.split(features[-1], [batch_dim] * num, dim=0)
+            return features
         features.append(self.encoder.layer3(features[2]))
-        features.append(self.out(self.encoder.layer4(features[3])))
+        features.append(self.encoder.layer4(features[3]))
 
         if is_list:
             features[-1] = torch.split(features[-1], [batch_dim] * num, dim=0)

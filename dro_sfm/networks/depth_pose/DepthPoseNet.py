@@ -41,15 +41,15 @@ class DepthPoseNet(nn.Module):
             self.scale_inv_depth = lambda x: (x, None) # identity
         
         # feature network, context network, and update block
-        self.foutput_dim = 512
-        self.feat_ratio = 32
+        self.foutput_dim = 128
+        self.feat_ratio = 8
         self.fnet = ResnetAttentionEncoder()
     
         self.depth_head = DepthDecoder(self.fnet.num_ch_enc)
         self.pose_head = PoseDecoder(self.fnet.num_ch_enc)
         # self.upmask_net = UpMaskNet(hidden_dim=self.foutput_dim, ratio=self.feat_ratio)
         
-        self.fdim = 512
+        self.fdim = 128
         self.hdim = 128 if self.is_high else 64
         self.cdim = 32
         
@@ -110,8 +110,11 @@ class DepthPoseNet(nn.Module):
         # run the feature network
         fmaps = self.fnet(torch.cat([target_image] + ref_imgs, dim=0))
         fmaps = [torch.split(fmap, [target_image.shape[0]] * (1 + len(ref_imgs)), dim=0) for fmap in fmaps]
+        # layer2 feature outdim: 128
+        fmap2, fmaps2_ref = fmaps[2][0], fmaps[2][1:]
+        # the last feature 
         fmap1, fmaps_ref = fmaps[-1][0], fmaps[-1][1:]
-        assert target_image.shape[2] / fmap1.shape[2] == self.feat_ratio
+        assert target_image.shape[2] / fmap2.shape[2] == self.feat_ratio
             
         # initial pose
         pose_list_init = []
@@ -120,19 +123,23 @@ class DepthPoseNet(nn.Module):
             pose_list_init.append(self.pose_head([torch.cat([fmap1, fmap], dim=1)]))   
         
         # initial depth
+        h, w = fmap2.shape[2:]
         depth_fmap = []
         for fmap in fmaps:
             depth_fmap.append(fmap[0])
-        inv_depth_init = self.depth_head(depth_fmap)
+        _inv_depth_init = self.depth_head(depth_fmap)
+        # [320,320] to [h, w]
+        inv_depth_init = F.interpolate(_inv_depth_init, (h, w), mode='bilinear', align_corners=False)
         # up_mask = self.upmask_net(fmap1)
         # inv_depth_up_init = self.upsample_depth(inv_depth_init, up_mask, ratio=self.feat_ratio)
 
-        inv_depth_predictions = [self.scale_inv_depth(inv_depth_init)[0]]
+        inv_depth_predictions = [self.scale_inv_depth(_inv_depth_init)[0]]
         pose_predictions = [[pose.clone() for pose in pose_list_init]]
         
         
         # run the context network for optimization
         if self.iters > 0:
+            # extract layer2 feature 
             cnet_depth = self.cnet_depth(target_image)[-1]        
             hidden_d, inp_d = torch.split(cnet_depth, [self.hdim, self.cdim], dim=1)
             hidden_d = torch.tanh(hidden_d)
@@ -159,12 +166,12 @@ class DepthPoseNet(nn.Module):
 
             # calc cost
             pose_cost_func_list = []
-            for fmap_ref in fmaps_ref:
-                pose_cost_func_list.append(partial(self.get_cost_each, fmap=fmap1, fmap_ref=fmap_ref,
+            for fmap2_ref in fmaps2_ref:
+                pose_cost_func_list.append(partial(self.get_cost_each, fmap=fmap2, fmap_ref=fmap2_ref,
                                                    depth=inv2depth(self.scale_inv_depth(inv_depth)[0]),
                                                    K=intrinsics, ref_K=intrinsics, scale_factor=1.0/self.feat_ratio))
 
-            depth_cost_func = partial(self.depth_cost_calc, fmap=fmap1, fmaps_ref=fmaps_ref,
+            depth_cost_func = partial(self.depth_cost_calc, fmap=fmap2, fmaps_ref=fmaps2_ref,
                                       pose_list=pose_list, K=intrinsics,
                                       ref_K=intrinsics, scale_factor=1.0/self.feat_ratio)
 
