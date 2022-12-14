@@ -1,4 +1,5 @@
 import torch
+import copy
 import torch.nn as nn
 from typing import Dict, List
 import torch.nn.functional as F
@@ -55,7 +56,13 @@ class ResnetAttentionEncoder(ResnetEncoder):
             kernel = 3
         self.SAB = SpatialAttention(self.num_ch_enc[1], kernel_size=kernel)
         self.out_layer = out_layer
+        
+        state_dict = torch.load('weights/endodepth-sdf-b_0018.pt')
+        encoder_dict = copy.deepcopy(state_dict['model']['encoder']) 
+        encoder_dict['encoder.conv1.weight'] = torch.cat([encoder_dict['encoder.conv1.weight']] * self.num_input_images, 1) / self.num_input_images
+        self.load_state_dict(encoder_dict, strict=False)
         # self.out = nn.Identity() if out_layer is None else out_layer
+        
 
     def forward(self, input_image):
         features = []
@@ -127,6 +134,8 @@ class DepthDecoder(nn.Module):
                 layer["dispconv"] = nn.Identity()
             # Add layer to decoder
             self.decoder.append(layer)
+        state_dict = torch.load('weights/endodepth-sdf-b_0018.pt')
+        self.load_state_dict(state_dict['model']['depth'])
 
 
     def forward(self, input_features):

@@ -75,7 +75,7 @@ class ResnetEncoder(nn.Module):
                    50: models.resnet50,
                    101: models.resnet101,
                    152: models.resnet152}
-
+        self.num_input_images = num_input_images
         if num_layers not in resnets:
             raise ValueError("{} is not a valid number of resnet layers".format(num_layers))
 
