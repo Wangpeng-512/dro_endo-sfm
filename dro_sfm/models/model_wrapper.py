@@ -573,6 +573,7 @@ def setup_dataset(config, mode, requirements, **kwargs):
 
         # Individual shared dataset arguments
         dataset_args_i = {
+            'mode':mode,
             'depth_type': config.depth_type[i] if requirements['gt_depth'] else None,
             'with_pose': requirements['gt_pose'],
         }

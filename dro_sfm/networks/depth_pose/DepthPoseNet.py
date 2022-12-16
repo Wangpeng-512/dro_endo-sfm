@@ -2,6 +2,7 @@ from functools import partial
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import enum
 
 from dro_sfm.networks.optim.update import BasicUpdateBlockPose, BasicUpdateBlockDepth
 from dro_sfm.networks.optim.update import DepthHead, PoseHead, UpMaskNet
@@ -41,15 +42,14 @@ class DepthPoseNet(nn.Module):
             self.scale_inv_depth = lambda x: (x, None) # identity
         
         # feature network, context network, and update block
-        self.foutput_dim = 128
-        self.feat_ratio = 8
-        self.fnet = ResnetAttentionEncoder()
+        self.foutput_dim = 64
+        self.feat_ratio = 4
+        self.fnet = ResnetAttentionEncoder(out_chs=self.foutput_dim, stride=self.feat_ratio)
     
         self.depth_head = DepthDecoder(self.fnet.num_ch_enc)
         self.pose_head = PoseDecoder(self.fnet.num_ch_enc)
         # self.upmask_net = UpMaskNet(hidden_dim=self.foutput_dim, ratio=self.feat_ratio)
-        
-        self.fdim = 128
+
         self.hdim = 128 if self.is_high else 64
         self.cdim = 32
         
@@ -57,8 +57,8 @@ class DepthPoseNet(nn.Module):
         self.update_block_pose = BasicUpdateBlockPose(hidden_dim=self.hdim, cost_dim=self.foutput_dim, context_dim=self.cdim)
 
         # self.cnet = ResNetEncoder(out_chs=self.foutput_dim, stride=self.feat_ratio)
-        self.cnet_depth = ResnetAttentionEncoder(out_layer=convbn(self.fdim, self.hdim + self.cdim, kernel=3,norm=None, activ=nn.LeakyReLU(), bias=False), num_input_images=1)
-        self.cnet_pose = ResnetAttentionEncoder(out_layer=convbn(self.fdim, self.hdim + self.cdim, kernel=3, norm=None, activ=nn.LeakyReLU(), bias=False), num_input_images=2)
+        self.cnet_depth = ResnetAttentionEncoder(out_chs=self.hdim+self.cdim, stride=self.feat_ratio, num_input_images=1)
+        self.cnet_pose = ResnetAttentionEncoder(out_chs=self.hdim+self.cdim, stride=self.feat_ratio,num_input_images=2)
 
 
     def upsample_depth(self, depth, mask, ratio=8):
@@ -110,8 +110,8 @@ class DepthPoseNet(nn.Module):
         # run the feature network
         fmaps = self.fnet(torch.cat([target_image] + ref_imgs, dim=0))
         fmaps = [torch.split(fmap, [target_image.shape[0]] * (1 + len(ref_imgs)), dim=0) for fmap in fmaps]
-        # layer2 feature outdim: 128
-        fmap2, fmaps2_ref = fmaps[2][0], fmaps[2][1:]
+        # radio = 8 or 4
+        fmap2, fmaps2_ref = fmaps[4][0], fmaps[4][1:]
         # the last feature 
         fmap1, fmaps_ref = fmaps[-1][0], fmaps[-1][1:]
         assert target_image.shape[2] / fmap2.shape[2] == self.feat_ratio
@@ -125,7 +125,10 @@ class DepthPoseNet(nn.Module):
         # initial depth
         h, w = fmap2.shape[2:]
         depth_fmap = []
-        for fmap in fmaps:
+        for i, fmap in enumerate(fmaps):
+            # 越过 stride 层
+            if i==4:
+                continue
             depth_fmap.append(fmap[0])
         _inv_depth_init = self.depth_head(depth_fmap)
         # [320,320] to [h, w]
@@ -140,7 +143,7 @@ class DepthPoseNet(nn.Module):
         # run the context network for optimization
         if self.iters > 0:
             # extract layer2 feature 
-            cnet_depth = self.cnet_depth(target_image)[-1]        
+            cnet_depth = self.cnet_depth(target_image)[4]        
             hidden_d, inp_d = torch.split(cnet_depth, [self.hdim, self.cdim], dim=1)
             hidden_d = torch.tanh(hidden_d)
             inp_d = torch.relu(inp_d)
@@ -148,7 +151,7 @@ class DepthPoseNet(nn.Module):
             img_pairs = []
             for ref_img in ref_imgs:
                 img_pairs.append(torch.cat([target_image, ref_img], dim=1))  
-            cnet_pose_list = self.cnet_pose(img_pairs)[-1]
+            cnet_pose_list = self.cnet_pose(img_pairs)[4]
             hidden_p_list, inp_p_list = [], []
             for cnet_pose in cnet_pose_list:
                 hidden_p, inp_p = torch.split(cnet_pose, [self.hdim, self.cdim], dim=1)

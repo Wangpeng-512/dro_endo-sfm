@@ -1,5 +1,6 @@
 import sys
-sys.path.append("/data0/projects/dro-sfm")
+
+sys.path.append('/home/ilsr/WPeng/dro_endo-sfm')
 import argparse
 import numpy as np
 import os

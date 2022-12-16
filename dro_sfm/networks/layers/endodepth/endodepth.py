@@ -48,20 +48,33 @@ class SpatialAttention(nn.Module):
 
 class ResnetAttentionEncoder(ResnetEncoder):
 
-    def __init__(self, out_layer=None, *args, **kwargs):
+    def __init__(self, stride=None, out_chs=128, *args, **kwargs):
         super(ResnetAttentionEncoder, self).__init__(*args, **kwargs)
         if hasattr(kwargs, "kernel_size"):
             kernel = kwargs['kernel_size']
         else:
             kernel = 3
         self.SAB = SpatialAttention(self.num_ch_enc[1], kernel_size=kernel)
-        self.out_layer = out_layer
+        self.stride = stride
+        self.upsample_mode = "bilinear"
+
+        if stride == 8:
+            self.upconv1 = nn.Sequential(nn.Conv2d(256, 128, 3, 1, padding=1), nn.ReLU(inplace=True))
+            self.upconv1_fusion = nn.Sequential(nn.Conv2d(256, 128, 3, 1, padding=1), nn.ReLU(inplace=True))
+            self.out_conv = nn.Conv2d(128, out_chs, 3, 1, padding=1)
+                
+        elif stride == 4:
+            self.upconv1 = nn.Sequential(nn.Conv2d(256, 128, 3, 1, padding=1), nn.ReLU(inplace=True))
+            self.upconv1_fusion = nn.Sequential(nn.Conv2d(256, 128, 3, 1, padding=1), nn.ReLU(inplace=True))
+            self.upconv2 = nn.Sequential(nn.Conv2d(128, 64, 3, 1, padding=1), nn.ReLU(inplace=True))
+            self.upconv2_fusion = nn.Sequential(nn.Conv2d(128, 64, 3, 1, padding=1), nn.ReLU(inplace=True))
+            self.out_conv = nn.Conv2d(64, out_chs, 3, 1, padding=1)
         
         state_dict = torch.load('weights/endodepth-sdf-b_0018.pt')
         encoder_dict = copy.deepcopy(state_dict['model']['encoder']) 
         encoder_dict['encoder.conv1.weight'] = torch.cat([encoder_dict['encoder.conv1.weight']] * self.num_input_images, 1) / self.num_input_images
         self.load_state_dict(encoder_dict, strict=False)
-        # self.out = nn.Identity() if out_layer is None else out_layer
+        
         
 
     def forward(self, input_image):
@@ -76,17 +89,32 @@ class ResnetAttentionEncoder(ResnetEncoder):
         x = self.encoder.relu(self.encoder.bn1(self.encoder.conv1(x)))
         features.append(self.SAB(x))
         features.append(self.encoder.layer1(self.encoder.maxpool(features[0])))
-        features.append(self.encoder.layer2(features[1]))
-        if self.out_layer:
-            features.append(self.out_layer(features[2]))
+        features.append(self.encoder.layer2(features[1]))   
+        features.append(self.encoder.layer3(features[2]))
+        if self.stride == 8:
+            x = F.interpolate(features[3], scale_factor=2, mode=self.upsample_mode)
+            x = self.upconv1(x)
+            x = self.upconv1_fusion(torch.cat([x, features[2]], dim=1))
+            x = self.out_conv(x)
+            features.append(x)
             if is_list:
                 features[-1] = torch.split(features[-1], [batch_dim] * num, dim=0)
             return features
-        features.append(self.encoder.layer3(features[2]))
+            
+        elif self.stride == 4:
+            x = F.interpolate(features[3], scale_factor=2, mode=self.upsample_mode)
+            x = self.upconv1(x)
+            x = self.upconv1_fusion(torch.cat([x, features[2]], dim=1)) 
+            
+            x = F.interpolate(x, scale_factor=2, mode=self.upsample_mode)
+            x = self.upconv2(x)
+            x = self.upconv2_fusion(torch.cat([x, features[1]], dim=1))
+            x = self.out_conv(x)
+            features.append(x)
         features.append(self.encoder.layer4(features[3]))
 
         if is_list:
-            features[-1] = torch.split(features[-1], [batch_dim] * num, dim=0)
+            features[4] = torch.split(features[4], [batch_dim] * num, dim=0)
         return features
 
 
