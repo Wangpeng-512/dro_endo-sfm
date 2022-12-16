@@ -5,6 +5,8 @@ import os
 from dro_sfm.utils.image import write_image
 from dro_sfm.utils.depth import write_depth, inv2depth, viz_inv_depth
 from dro_sfm.utils.logging import prepare_dataset_prefix
+from dro_sfm.utils.p3d import *
+import torchvision.transforms as tfm 
 
 
 def save_depth(batch, output, args, dataset, save):
@@ -45,6 +47,10 @@ def save_depth(batch, output, args, dataset, save):
 
         # For each image in the batch
         length = rgb.shape[0]
+
+        H,W = rgb.shape[2:]
+        backproj = DepthBackprojD(H, W, batch['intrinsics']).cuda() 
+
         for i in range(length):
             # Save numpy depth maps
             if save.depth.npz:
@@ -63,3 +69,10 @@ def save_depth(batch, output, args, dataset, save):
             if save.depth.viz:
                 viz_i = viz_inv_depth(pred_inv_depth[i]) * 255
                 write_image('{}/{}_viz.png'.format(save_path, filename[i]), viz_i)
+
+            # save point cloud 
+            pc = backproj.forward(inv2depth(pred_inv_depth[i]).unsqueeze(0), use_mono=False)
+            pc_col = torch.cat([pc[:, 0,:3,], rgb], dim=1)
+                        
+            pcd = np6d_o3d_color(pc_col.detach().cpu().view(6, -1).T.contiguous().numpy())
+            o3d.io.write_point_cloud('{}/{}_point.ply'.format(save_path, filename[i]), pcd, write_ascii=True)

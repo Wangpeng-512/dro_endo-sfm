@@ -2,9 +2,9 @@ name: 'blender'
 save:
     folder: './results'
 arch:
-    max_epochs: 100
+    max_epochs: 50
 checkpoint:
-    save_top_k: 10
+    save_top_k: 5
     monitor: 'abs_rel_pp_gt'
     monitor_index: 0
 model:
@@ -35,24 +35,24 @@ datasets:
     train:
         batch_size: 2
         dataset: ['Blender']
-        path: ['E:/DataSet/blender/train']
+        path: ['/data/Datasets/blender/blender-duodenum-5-211126']
         split: ['']
         depth_type: ['velodyne']
         repeat: [1]
-        forward_context: 2
-        back_context: 0
+        forward_context: 1
+        back_context: 1
         num_workers: 1
     validation:
         dataset: ['Blender']
-        path: ['E:/DataSet/blender/test']
+        path: ['/data/Datasets/blender/test']
         split: ['']
         depth_type: ['velodyne']
         forward_context: 1
-        back_context: 1
+        back_context: 0
     test:
         dataset: ['Blender']
-        path: ['E:/DataSet/blender/test']
+        path: ['/data/Datasets/EndoSLAM/UnityCam/test']
         split: ['']
-        depth_type: ['velodyne']
+        depth_type: ['']
         forward_context: 1
         back_context: 0

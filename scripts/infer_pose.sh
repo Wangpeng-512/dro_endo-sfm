@@ -1,1 +1,1 @@
-python scripts/infer_pose.py --checkpoint ckpt/PackNet01_MR_selfsup_D.ckpt --input /data0/datasets/kitti/KITTI_tiny/2011_09_26/2011_09_26_drive_0023_sync/image_02/data  --output results/eval/pose  --save png
+python scripts/infer_pose.py --checkpoint results/mdoel/blender/SupModelMF_DepthPoseNet_it12-h-out_epoch=29_test-velodyne-abs_rel_pp_gt=0.112.ckpt --input /data/Datasets/blender/test/images  --output results/eval/pose  --save png

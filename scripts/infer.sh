@@ -1,0 +1,1 @@
+python scripts/infer.py --checkpoint results/mdoel/blender/SupModelMF_DepthPoseNet_it12-h-out_epoch=29_test-velodyne-abs_rel_pp_gt=0.112.ckpt --input /data/Datasets/blender/test  --output results/eval/pose  --save png
