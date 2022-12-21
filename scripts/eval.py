@@ -6,10 +6,9 @@ import argparse
 import torch
 
 from dro_sfm.models.model_wrapper import ModelWrapper
-from dro_sfm.trainers.horovod_trainer import HorovodTrainer
+from dro_sfm.trainers.dro_trainer import DROTrainer
 from dro_sfm.utils.config import parse_test_file
 from dro_sfm.utils.load import set_debug
-from dro_sfm.utils.horovod import hvd_init
 
 
 def parse_args():
@@ -40,7 +39,6 @@ def test(ckpt_file, cfg_file, half):
         use half precision (fp16)
     """
     # Initialize horovod
-    hvd_init()
 
     # Parse arguments
     config, state_dict = parse_test_file(ckpt_file, cfg_file)
@@ -57,7 +55,7 @@ def test(ckpt_file, cfg_file, half):
     config.arch["dtype"] = torch.float16 if half else None
 
     # Create trainer with args.arch parameters
-    trainer = HorovodTrainer(**config.arch)
+    trainer = DROTrainer(**config.arch)
 
     # Test model
     trainer.test(model_wrapper)

@@ -56,7 +56,6 @@ def train(file, config):
 
     # Initialize model wrapper
     model_wrapper = ModelWrapper(config, resume=ckpt, logger=logger)
-    model = DepthPose(model_wrapper)
     # Create trainer with args.arch parameters
     trainer = DROTrainer(**config.arch, checkpoint=checkpoint)
 

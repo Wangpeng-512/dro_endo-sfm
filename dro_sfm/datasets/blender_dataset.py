@@ -72,14 +72,14 @@ def collate_fn(batch):
 class BlenderDataset(Dataset):
     def __init__(self, root_dir, data_transform=None,
                  forward_context=0, back_context=0, strides=(1,),
-                 depth_type=None, **kwargs):
+                 depth_type=None,mode = None, **kwargs):
         super().__init__()
         # Asserts
         # assert depth_type is None or depth_type == '', \
         #     'ImageDataset currently does not support depth types'
         assert len(strides) == 1 and strides[0] == 1, \
             'ImageDataset currently only supports stride of 1.'
-
+        self.is_train = mode is 'train'
         self.depth_type = depth_type
         self.with_depth = depth_type is not '' and depth_type is not None
         self.root_dir = root_dir
@@ -95,6 +95,11 @@ class BlenderDataset(Dataset):
         self.file_tree = os.listdir(os.path.join(root_dir, 'images'))     
         # sort color image file list
         self.file_tree.sort(key=lambda x: int(x.split('.png')[0]))
+        if self.is_train:
+            self.file_tree = self.file_tree[:1500]
+        else:
+            self.file_tree = self.file_tree[:300]
+        
 
         # downsample by 5
         # for k in self.file_tree:
@@ -173,20 +178,21 @@ class BlenderDataset(Dataset):
         context_paths = self._get_context_file_paths(filename, self.file_tree)
         context_images = [load_image(os.path.join(self.root_dir, 'images', filename))
                                 for filename in context_paths]
-        pose_path = self._get_pose_file('pose', filename)
-        pose = np.genfromtxt(pose_path)
-        context_pose_paths = [self._get_pose_file('pose', x) for x in context_paths]
-        context_poses = [np.genfromtxt(x) for x in context_pose_paths]
+        if self.is_train:  
+            pose_path = self._get_pose_file('pose', filename)
+            pose = np.genfromtxt(pose_path)
+            context_pose_paths = [self._get_pose_file('pose', x) for x in context_paths]
+            context_poses = [np.genfromtxt(x) for x in context_pose_paths]
 
-        #rel_poses = [np.matmul(x, np.linalg.inv(pose)).astype(np.float32) for x in context_poses]
-        rel_poses = [np.matmul(np.linalg.inv(x), pose).astype(np.float32) for x in context_poses]
+            #rel_poses = [np.matmul(x, np.linalg.inv(pose)).astype(np.float32) for x in context_poses]
+            rel_poses = [np.matmul(np.linalg.inv(x), pose).astype(np.float32) for x in context_poses]
 
         sample = {
             'idx': idx,
             'filename': '%s' % os.path.splitext(filename)[0],
             'rgb': image,
             'intrinsics': intr,
-            'pose_context': rel_poses
+            
         }
 
         # print(filename, context_paths)
@@ -196,6 +202,12 @@ class BlenderDataset(Dataset):
             sample.update({
                 'depth': resized_depth,
             })
+        if self.is_train:
+            sample.update(
+                {
+                    'pose_context': rel_poses
+                }
+            )
 
         if self.has_context:
             sample['rgb_context'] = context_images

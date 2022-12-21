@@ -1,2 +1,4 @@
 ﻿results
 *.pyc
+dataset
+weights
