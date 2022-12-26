@@ -8,8 +8,8 @@
       "console": "integratedTerminal",
       "justMyCode": true,
       "args": [
-        "--checkpoint", "results/mdoel/blender/SupModelMF_DepthPoseNet_it12-h-out_epoch=22_test-velodyne-abs_rel_pp_gt=0.442.ckpt",
-        "--config", "configs/train_blender.yaml"
+        "--checkpoint", "results/mdoel/blender/SupModelMF_DepthPoseNet_it12-h-out_epoch=00_dataset-velodyne-abs_rel_pp_gt=1.425.ckpt",
+        "--config", "configs/train_blender_pretrain.yaml"
       ]
       
     },
