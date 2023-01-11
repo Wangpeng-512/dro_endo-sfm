@@ -1,6 +1,19 @@
 {
   "configurations": [
     {
+      "name": "infer.py",
+      "type": "python",
+      "request": "launch",
+      "program": "scripts/infer.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "--checkpoint", "results/mdoel/blender/SupModelMF_DepthPoseNet_it12-h-out_epoch=00_dataset-velodyne-abs_rel_pp_gt=1.425.ckpt",
+        "--input", "/data/Datasets/EndoSLAM/UnityCam/Colon/Frames",
+        "--output", "./endo"
+      ]
+    },
+    {
       "name": "eval",
       "type": "python",
       "request": "launch",

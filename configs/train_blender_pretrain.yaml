@@ -51,8 +51,8 @@ datasets:
         forward_context: 1
         back_context: 0
     test:
-        dataset: ['Blender']
-        path: ['./dataset']
+        dataset: ['EndoSLAM']
+        path: ['/data/Datasets/EndoSLAM/UnityCam/Stomach/Frames']
         split: ['']
         depth_type: ['']
         forward_context: 1

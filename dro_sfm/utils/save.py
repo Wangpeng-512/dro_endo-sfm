@@ -47,10 +47,13 @@ def save_depth(batch, output, args, dataset, save):
         length = rgb.shape[0]
         for i in range(length):
             # Save numpy depth maps
+            # if save.depth.npz:
+            #     write_depth('{}/{}_depth.npz'.format(save_path, filename[i]),
+            #                 depth=inv2depth(pred_inv_depth[i]),
+            #                 intrinsics=batch['intrinsics'][i] if 'intrinsics' in batch else None)
             if save.depth.npz:
-                write_depth('{}/{}_depth.npz'.format(save_path, filename[i]),
-                            depth=inv2depth(pred_inv_depth[i]),
-                            intrinsics=batch['intrinsics'][i] if 'intrinsics' in batch else None)
+                write_depth('{}/{}.npy'.format(save_path, filename[i]),
+                            depth=inv2depth(pred_inv_depth[i]),)
             # Save png depth maps
             if save.depth.png:
                 write_depth('{}/{}_depth.png'.format(save_path, filename[i]),

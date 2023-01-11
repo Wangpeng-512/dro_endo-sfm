@@ -684,6 +684,12 @@ def setup_dataset(config, mode, requirements, **kwargs):
                 config.path[i],
                 **dataset_args, **dataset_args_i,
             )
+        elif config.dataset[i] == 'EndoSLAM':
+            from dro_sfm.datasets.endoslam_dataset import EndoSLAMDataset
+            dataset = EndoSLAMDataset(
+                config.path[i],
+                **dataset_args, **dataset_args_i,
+            )
         else:
             ValueError('Unknown dataset %d' % config.dataset[i])
 
