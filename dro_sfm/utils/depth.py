@@ -421,3 +421,39 @@ def compute_pose_metrics(config, gt, pred):
     tcm = 100*np.sqrt(np.sum((t1-a*t2)**2, axis=-1))
 
     return torch.Tensor([rdeg, tdeg, tcm])
+
+def viz_inv_depth(inv_depth, normalizer=None, percentile=95,
+                  colormap='plasma', filter_zeros=False):
+    """
+    Converts an inverse depth map to a colormap for visualization.
+
+    Parameters
+    ----------
+    inv_depth : torch.Tensor [B,1,H,W]
+        Inverse depth map to be converted
+    normalizer : float
+        Value for inverse depth map normalization
+    percentile : float
+        Percentile value for automatic normalization
+    colormap : str
+        Colormap to be used
+    filter_zeros : bool
+        If True, do not consider zero values during normalization
+
+    Returns
+    -------
+    colormap : np.array [H,W,3]
+        Colormap generated from the inverse depth map
+    """
+    # If a tensor is provided, convert to numpy
+    if is_tensor(inv_depth):
+        # Squeeze if depth channel exists
+        if len(inv_depth.shape) == 3:
+            inv_depth = inv_depth.squeeze(0)
+        inv_depth = inv_depth.detach().cpu().numpy()
+    cm = get_cmap(colormap)
+    if normalizer is None:
+        normalizer = np.percentile(
+            inv_depth[inv_depth > 0] if filter_zeros else inv_depth, percentile)
+    inv_depth /= (normalizer + 1e-6)
+    return cm(np.clip(inv_depth, 0., 1.0))[:, :, :3]

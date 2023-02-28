@@ -195,6 +195,8 @@ class ModelWrapper(torch.nn.Module):
         if output is None:
             return None
         return {
+            'inv_depth': output['inv_depths'],
+            'poses':output['poses'],
             'loss': output['loss'],
             'metrics': output['metrics']
         }
@@ -575,7 +577,6 @@ def setup_dataset(config, mode, requirements, **kwargs):
         dataset_args_i = {
             'depth_type': config.depth_type[i] if requirements['gt_depth'] else None,
             'with_pose': requirements['gt_pose'],
-            'mode':mode
         }
 
         # KITTI dataset

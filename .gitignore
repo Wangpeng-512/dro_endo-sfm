@@ -2,3 +2,5 @@
 *.pyc
 dataset
 weights
+log
+runs

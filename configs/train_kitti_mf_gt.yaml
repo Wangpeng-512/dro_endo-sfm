@@ -35,24 +35,23 @@ datasets:
     train:
         batch_size: 2
         dataset: ['KITTI']
-        path: ['/data/datasets/kitti/KITTI_raw']
-        split: ['data_splits/eigen_zhou_files.txt']
+        path: ['/home/ilsr/WPeng/DRO-TrianFlow-GMflow/dataset/KITTI_raw']
+        split: ['/home/ilsr/WPeng/DRO-TrianFlow-GMflow/dataset/KITTI_raw/train.txt']
         depth_type: ['groundtruth']
-        repeat: [2]
+        repeat: [1]
         forward_context: 1
         back_context: 1
     validation:
         dataset: ['KITTI']
-        path: ['/data/datasets/kitti/KITTI_raw']
-        split: ['data_splits/eigen_val_files.txt',
-                'data_splits/eigen_test_files.txt']
+        path: ['/home/ilsr/WPeng/DRO-TrianFlow-GMflow/dataset/KITTI_raw']
+        split: ['/home/ilsr/WPeng/DRO-TrianFlow-GMflow/dataset/KITTI_raw/val.txt']
         depth_type: ['groundtruth']
         forward_context: 1
         back_context: 0
     test:
         dataset: ['KITTI']
-        path: ['/data/datasets/kitti/KITTI_raw']
-        split: ['data_splits/eigen_test_files.txt']
+        path: ['/home/ilsr/WPeng/DRO-TrianFlow-GMflow/dataset/KITTI_raw']
+        split: ['/home/ilsr/WPeng/DRO-TrianFlow-GMflow/dataset/KITTI_raw/test.txt']
         depth_type: ['groundtruth']
         forward_context: 1
         back_context: 0

@@ -7,6 +7,8 @@ from dro_sfm.utils.logging import print_config
 from dro_sfm.utils.logging import AvgMeter
 from tqdm import tqdm
 from dro_sfm.utils.logging import prepare_dataset_prefix
+from dro_sfm.utils.depth import viz_inv_depth
+from torch.utils.tensorboard import SummaryWriter
 
 class DROTrainer():
     def __init__(self, min_epochs=0, max_epochs=50,
@@ -23,6 +25,7 @@ class DROTrainer():
         self.avg_loss = AvgMeter(50)
         self.avg_loss2 = AvgMeter(50)
         self.dtype = kwargs.get("dtype", None)  # just for test for now
+        self.logger = SummaryWriter(log_dir='./log/events', flush_secs=30)
 
 
     def fit(self, module):
@@ -69,7 +72,7 @@ class DROTrainer():
         progress_bar = self.train_progress_bar(
             dataloader, module.config.datasets.train)
         # Start training loop
-        outputs = []
+        # outputs = []
         # For all batches
         for i, batch in progress_bar:
             # Reset optimizer
@@ -77,6 +80,19 @@ class DROTrainer():
             # Send samples to GPU and take a training step
             batch = sample_to_cuda(batch)
             output = module.training_step(batch, i)
+
+            #**********************************************************************
+            if i%100 == 0:
+                self.logger.add_image("image", batch['rgb'][0], global_step = i + module.current_epoch * len(dataloader), dataformats='CHW')
+                viz_depth = []
+                import numpy as np
+                for inv_depth in output['inv_depth']:
+                    depth = np.uint8(viz_inv_depth(inv_depth[0]) * 255)
+                    depth = np.expand_dims(depth, 0)
+                    viz_depth.append(depth)
+                viz_depth =  np.concatenate(viz_depth, axis=0) 
+                self.logger.add_images("iters", viz_depth, global_step = i + module.current_epoch * len(dataloader), dataformats='NHWC')
+
             if output is None:
                 print("skip this training step.....")
                 continue
@@ -85,7 +101,7 @@ class DROTrainer():
             optimizer.step()
             # Append output to list of outputs
             output['loss'] = output['loss'].detach()
-            outputs.append(output)
+            # outputs.append(output)
             # Update progress bar if in rank 0
             
             progress_bar.set_description(

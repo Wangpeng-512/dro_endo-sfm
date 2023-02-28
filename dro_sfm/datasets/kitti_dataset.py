@@ -217,8 +217,8 @@ class KITTIDataset(Dataset):
             self._cache[parent_folder] = max_num_files
 
         # Check bounds
-        if (f_idx - backward_context * stride) < 0 or (
-                f_idx + forward_context * stride) >= max_num_files:
+        if (f_idx - backward_context * stride) < 5 or (
+                f_idx + forward_context * stride) >= max_num_files+5:
             return None, None
 
         # Backward context
@@ -229,18 +229,18 @@ class KITTIDataset(Dataset):
             filename = self._get_next_file(c_idx, sample_name)
             if os.path.exists(filename):
                 backward_context_idxs.append(c_idx)
-        if c_idx < 0:
+        if c_idx < 5:
             return None, None
 
         # Forward context
         c_idx = f_idx
         forward_context_idxs = []
-        while len(forward_context_idxs) < forward_context and c_idx < max_num_files:
+        while len(forward_context_idxs) < forward_context and c_idx < max_num_files+5:
             c_idx += stride
             filename = self._get_next_file(c_idx, sample_name)
             if os.path.exists(filename):
                 forward_context_idxs.append(c_idx)
-        if c_idx >= max_num_files:
+        if c_idx >= max_num_files+5:
             return None, None
 
         return backward_context_idxs, forward_context_idxs
