@@ -34,8 +34,8 @@
       "console": "integratedTerminal",
       "justMyCode": true,
       "args": [
-        // "weights/pretrain/outdoor_kitti.ckpt",
-       "./configs/train_kitti_mf_gt.yaml",
+        "weights/pretrain/outdoor_kitti.ckpt",
+        "--config", "./configs/train_kitti_mf_gt.yaml",
       ]
     },
     {

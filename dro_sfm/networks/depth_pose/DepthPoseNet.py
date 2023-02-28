@@ -2,6 +2,7 @@ from functools import partial
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 from dro_sfm.networks.optim.update import BasicUpdateBlockPose, BasicUpdateBlockDepth
 from dro_sfm.networks.optim.update import DepthHead, PoseHead, UpMaskNet
@@ -10,6 +11,7 @@ from dro_sfm.networks.optim.extractor import ResNetEncoder
 from dro_sfm.geometry.camera import Camera, Pose
 from dro_sfm.utils.depth import inv2depth
 from dro_sfm.networks.layers.resnet.layers import disp_to_depth
+from dro_sfm.utils.extract_svo_point import PixelSelector
 
                 
 class DepthPoseNet(nn.Module):
@@ -37,6 +39,8 @@ class DepthPoseNet(nn.Module):
             self.scale_inv_depth = partial(disp_to_depth, min_depth=self.min_depth, max_depth=self.max_depth)
         else:
             self.scale_inv_depth = lambda x: (x, None) # identity
+        
+        self.dso_select = PixelSelector()
         
         # feature network, context network, and update block
         self.foutput_dim = 128
@@ -109,6 +113,21 @@ class DepthPoseNet(nn.Module):
         fmaps = torch.split(fmaps, [target_image.shape[0]] * (1 + len(ref_imgs)), dim=0)
         fmap1, fmaps_ref = fmaps[0], fmaps[1:]
         assert target_image.shape[2] / fmap1.shape[2] == self.feat_ratio
+
+        # **************************新加mask**********************************
+        dso_masks = []
+        h, w = int(target_image.shape[2]/self.feat_ratio), int(target_image.shape[3]/self.feat_ratio)
+        for i in range(target_image.size(0)):
+            img = target_image[i].permute(1,2,0).detach().cpu().numpy()  # [H, W, 3]
+            dso_points = self.dso_select.extract_points(img)
+            mask = np.zeros((1, 1, h, w))
+            for n in range(dso_points.shape[0]):
+                mask_h, mask_w = dso_points[n] 
+                mask[0,0,int(mask_h / self.feat_ratio), int(mask_w /self.feat_ratio)] = 1
+            dso_masks.append(mask)
+        dso_masks = np.concatenate(dso_masks, 0)
+        dso_masks = torch.tensor(dso_masks, device=target_image.device)
+        
             
         # initial pose
         pose_list_init = []
@@ -117,6 +136,9 @@ class DepthPoseNet(nn.Module):
         
         # initial depth
         inv_depth_init = self.depth_head(fmap1, act_fn=F.sigmoid)
+
+        inv_depth_init[dso_masks == 0] = 1e-5
+
         up_mask = self.upmask_net(fmap1)
         inv_depth_up_init = self.upsample_depth(inv_depth_init, up_mask, ratio=self.feat_ratio)
 
